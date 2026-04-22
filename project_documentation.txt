@@ -1,0 +1,74 @@
+CONNECTIFY - PROJECT DOCUMENTATION (A TO Z)
+=========================================
+
+1. PROJECT OVERVIEW
+------------------
+Connectify is a modern, real-time chat application built using the Django framework and Django Channels. It provides a WhatsApp-like experience including real-time messaging, status updates, media sharing, and user profile management.
+
+2. CORE TECHNOLOGY STACK (THEORY)
+--------------------------------
+A. Django: A high-level Python web framework that encourages rapid development and clean, pragmatic design.
+B. Django Channels: Extends Django to handle asynchronous protocols like WebSockets, allowing for full-duplex communication between server and client.
+C. Daphne: An ASGI (Asynchronous Server Gateway Interface) server used to run Django Channels. Unlike standard WSGI (used by Gunicorn), ASGI can handle multiple concurrent connections like WebSockets.
+D. Redis: An in-memory data structure store used here as the "Channel Layer." It acts as a broker that allows different instances of the application to communicate with each other (e.g., sending a message from User A to User B).
+E. WebSockets: A communication protocol providing full-duplex communication channels over a single TCP connection. Unlike HTTP (request-response), WebSockets stay open, allowing the server to push data to the client instantly.
+F. WhiteNoise: A library that allows your web app to serve its own static files (CSS, JS, images), making it self-contained and easy to deploy.
+
+3. PROJECT STRUCTURE
+-------------------
+- chat_project/: The root configuration directory.
+  - asgi.py: The entry point for ASGI-compatible web servers (Daphne).
+  - settings.py: Project-wide settings (Database, Apps, Middleware).
+  - urls.py: Main URL routing table.
+- chat/: The primary application for messaging.
+  - consumers.py: The "views" for WebSockets. Handles connecting, disconnecting, and receiving/sending messages.
+  - routing.py: URL routing for WebSockets (ws://...).
+  - models.py: Database tables for Messages and Status updates.
+  - views.py: Standard HTTP views for pages like Home and Status List.
+- accounts/: Handles user management.
+  - models.py: User profile extensions.
+  - views.py: Login, Register, and Profile logic.
+- templates/: HTML files using Django Template Language (DTL).
+- static/: Assets like the 'InterTight' font and 'logo.jpeg'.
+
+4. CORE FEATURES & IMPLEMENTATION
+--------------------------------
+A. Real-Time Chat:
+   - Implemented using AsyncWebsocketConsumer in chat/consumers.py.
+   - When User A sends a message, it's sent via WebSocket to the server, saved to the database, and broadcasted to User B's unique "group" in the Channel Layer.
+B. Status Updates:
+   - Users can upload text or images.
+   - Each status has an 'expires_at' field (auto-set to 24 hours).
+   - A custom management command 'cleanup_statuses' can delete expired ones.
+C. Media Sharing:
+   - Images are sent as Base64 strings over WebSockets, processed on the server, and saved as ImageFields.
+   - Users can download shared images directly from the chat window.
+D. User Search:
+   - A client-side JavaScript filter that hides/shows users in the sidebar based on input.
+E. Unread Notifications:
+   - Real-time "unread dots" are updated via WebSockets when a message is received while the user is on another page.
+
+5. DATABASE MODELS (SCHEMA)
+--------------------------
+- User (Django Built-in): Stores credentials.
+- Profile: Extends User with an avatar.
+- Message: Stores sender, receiver, text, image, timestamp, and 'is_read' status.
+- Status: Stores user, content, creation time, and expiry time.
+- StatusView: Tracks which users have viewed which status to show "new status" indicators.
+
+6. DEPLOYMENT (RENDER)
+---------------------
+- render.yaml: A Blueprint file that defines the Web service and Redis instance.
+- build.sh: A script that runs automatically on deployment to install dependencies, run migrations, and collect static files.
+- Gunicorn/Uvicorn: The production server setup. Gunicorn manages the process, while Uvicorn workers handle the ASGI/WebSocket traffic.
+
+7. HOW TO STUDY THIS PROJECT
+---------------------------
+1. Start with 'chat_project/settings.py' to see how apps and middleware are linked.
+2. Look at 'chat/models.py' to understand how data is structured.
+3. Examine 'chat/consumers.py' to see how real-time communication works.
+4. Study 'templates/base.html' to see how the UI is shared across pages using blocks.
+5. Review the JavaScript in 'templates/chat.html' to see the client-side WebSocket connection.
+
+=========================================
+END OF DOCUMENTATION

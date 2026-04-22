@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connectify | Real-time Chat</title>
     {% load static %}
-    <link rel="icon" type="image/jpeg" href="{% static 'images/logo.jpeg' %}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Righteous&display=swap" rel="stylesheet">
     <style>
         @font-face {
             font-family: 'InterTight';
@@ -28,6 +28,7 @@
             --border-color: #dee2e6;
             --nav-width: 70px;
             --sidebar-width: 300px;
+            --brand-font: 'Righteous', cursive;
         }
         html, body {
             height: 100%;
@@ -148,12 +149,13 @@
         }
         .btn-black { background: #000; color: #fff; border: none; padding: 8px 20px; border-radius: 8px; }
         .form-control:focus { border-color: #000; box-shadow: none; }
+        .brand-text { font-family: var(--brand-font); }
     </style>
 </head>
 <body class="{% if other_user or status_user %}in-chat{% endif %}">
     {% if user.is_authenticated %}
     <div class="slim-nav">
-        <img src="{% static 'images/logo.jpeg' %}" alt="Logo" class="nav-logo">
+        <div class="brand-text fs-4 mb-4" style="writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);">Connectify</div>
         <a href="{% url 'home' %}" class="nav-icon {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'chat_room' %}active{% endif %}" title="Messages">
             <i class="bi bi-chat-fill"></i>
             <span class="nav-label">Chat</span>
