@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: connectify-chat
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "python -m daphne -p $PORT -b 0.0.0.0 chat_project.asgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: connectify-redis
+          property: connectionString
+
+  - type: redis
+    name: connectify-redis
+    ipAllowList: [] # only allow internal connections

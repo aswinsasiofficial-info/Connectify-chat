@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="sidebar {% if other_user %}hide-mobile{% endif %}">
+    <div class="p-4 pb-2">
+        <div class="mb-4">
+            <img src="{% static 'images/Connectify-logo.png' %}" alt="Connectify" style="height: 40px; filter: brightness(0);">
+        </div>
+        
+        <div class="search-container mb-4">
+            <div class="input-group border border-dark rounded-pill overflow-hidden">
+                <span class="input-group-text bg-light border-0 ps-3">
+                    <i class="bi bi-search small text-muted"></i>
+                </span>
+                <input type="text" class="form-control bg-light border-0 py-2" placeholder="Search" id="user-search">
+            </div>
+        </div>
+        <h6 class="text-uppercase small fw-bold text-muted mb-3">Users</h6>
+    </div>
+    <div class="user-list overflow-y-auto flex-grow-1">
+        {% for user_item in users %}
+            <a href="{% url 'chat_room' user_item.username %}" class="user-item {% if other_user.username == user_item.username %}active{% endif %}" id="user-item-{{ user_item.username }}">
+                <i class="bi bi-person-circle fs-4 me-3"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-bold small">{{ user_item.username }}</div>
+                    <small class="text-muted d-block user-last-msg" style="font-size: 0.75rem;">Hey there! I am using Connectify</small>
+                </div>
+                <div class="unread-badge-container">
+                    <div class="unread-dot bg-success rounded-circle {% if user_item.unread_count == 0 %}d-none{% endif %}" style="width: 12px; height: 12px;"></div>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="chat-window {% if other_user %}show-mobile{% endif %}">
+    {% if other_user %}
+        <div class="p-3 bg-white border-bottom d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+                <a href="{% url 'home' %}" class="btn btn-link text-dark d-md-none me-2"><i class="bi bi-arrow-left fs-4"></i></a>
+                <i class="bi bi-person-circle fs-3 me-3"></i>
+                <h6 class="m-0 fw-bold">{{ other_user.username }}</h6>
+            </div>
+            <div class="d-flex gap-3 text-muted">
+                <i class="bi bi-info-circle cursor-pointer"></i>
+            </div>
+        </div>
+        <div class="messages-display" id="chat-log">
+            {% for message in chat_messages %}
+                <div class="message {% if message.sender == user %}message-sent{% else %}message-received{% endif %}">
+                    {% if message.text %}
+                        <div class="message-text">{{ message.text }}</div>
+                    {% endif %}
+                    {% if message.image %}
+                        <img src="{{ message.image.url }}" alt="Sent image">
+                    {% endif %}
+                    <small class="message-timestamp" data-utc="{{ message.timestamp.isoformat }}">
+                        {{ message.timestamp|date:"h:i A" }}
+                        {% if message.sender == user %}
+                            <i class="bi bi-check2 ms-1"></i>
+                        {% endif %}
+                    </small>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="chat-input-area px-4 py-3">
+            <img id="image-preview" class="preview-img mb-2" style="max-width: 100px; border-radius: 8px; display: none;">
+            <form id="chat-form" class="d-flex align-items-center gap-3">
+                <input type="file" id="image-input" accept="image/*" class="d-none">
+                <i class="bi bi-plus-lg fs-4 cursor-pointer text-muted" onclick="document.getElementById('image-input').click()"></i>
+                <div class="flex-grow-1 position-relative">
+                    <input type="text" id="chat-message-input" class="form-control rounded-pill border-0 bg-light py-2 px-4" placeholder="Type a message..." autocomplete="off">
+                    <div class="position-absolute top-50 end-0 translate-middle-y me-3 text-muted cursor-pointer" id="emoji-button" title="Emojis">
+                        <i class="bi bi-emoji-smile"></i>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-black rounded-pill px-4 py-2" id="chat-message-submit">
+                    <i class="bi bi-send-fill"></i>
+                </button>
+            </form>
+        </div>
+    {% else %}
+        <div class="d-flex flex-column justify-content-center align-items-center h-100 text-center opacity-50">
+            <img src="{% static 'images/Connectify-logo.png' %}" alt="Connectify" style="height: 100px; filter: brightness(0);" class="mb-4">
+            <h3 class="fw-bold">CONNECTIFY</h3>
+            <p>Send and receive messages without keeping your phone online.<br>Use Connectify on up to 4 linked devices and 1 phone at the same time.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if other_user %}
+<script>
+    const roomName = "{{ other_user.username }}";
+    const userName = "{{ user.username }}";
+    const chatLog = document.querySelector('#chat-log');
+    const messageInput = document.querySelector('#chat-message-input');
+    const imageInput = document.querySelector('#image-input');
+    const imagePreview = document.querySelector('#image-preview');
+    const chatForm = document.querySelector('#chat-form');
+    const emojiButton = document.querySelector('#emoji-button');
+
+    function formatLocalTime(isoString) {
+        const date = new Date(isoString);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+
+    // Convert existing timestamps
+    document.querySelectorAll('.message-timestamp[data-utc]').forEach(el => {
+        el.childNodes[0].textContent = formatLocalTime(el.getAttribute('data-utc')) + ' ';
+    });
+
+    // Emoji button functionality
+    emojiButton.onclick = function() {
+        messageInput.value += '😊';
+        messageInput.focus();
+    };
+
+    const chatSocket = new WebSocket(
+        (window.location.protocol === 'https:' ? 'wss://' : 'ws://')
+        + window.location.host
+        + '/ws/chat/'
+        + roomName
+        + '/'
+    );
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        
+        if (data.type === 'unread_notification') {
+            // Update sidebar unread dot if this is not the current chat room
+            if (data.sender !== roomName) {
+                const userItem = document.getElementById(`user-item-${data.sender}`);
+                if (userItem) {
+                    const dot = userItem.querySelector('.unread-dot');
+                    const lastMsg = userItem.querySelector('.user-last-msg');
+                    
+                    dot.classList.remove('d-none');
+                    lastMsg.textContent = data.message;
+                    lastMsg.classList.add('fw-bold', 'text-dark');
+                }
+            } else {
+                // If chat is open, notify server that we read it
+                chatSocket.send(JSON.stringify({
+                    'type': 'mark_read'
+                }));
+            }
+            return;
+        }
+
+        if (data.type === 'messages_read') {
+            // Optional: Update UI to show "seen" for sent messages
+            console.log(`${data.reader} read your messages`);
+            return;
+        }
+
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message');
+        messageDiv.classList.add(data.sender === userName ? 'message-sent' : 'message-received');
+
+        let content = '';
+        if (data.message) {
+            content += `<div class="message-text">${data.message}</div>`;
+        }
+        if (data.image_url) {
+            content += `<img src="${data.image_url}" alt="Sent image">`;
+        }
+        content += `<small class="message-timestamp">
+                        ${formatLocalTime(data.timestamp)}
+                        ${data.sender === userName ? '<i class="bi bi-check2 ms-1"></i>' : ''}
+                    </small>`;
+        
+        messageDiv.innerHTML = content;
+        chatLog.appendChild(messageDiv);
+        chatLog.scrollTop = chatLog.scrollHeight;
+    };
+
+    chatSocket.onclose = function(e) {
+        console.error('Chat socket closed unexpectedly');
+    };
+
+    // Scroll to bottom on load
+    chatLog.scrollTop = chatLog.scrollHeight;
+
+    // Image preview
+    imageInput.onchange = function() {
+        const file = imageInput.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    chatForm.onsubmit = function(e) {
+        e.preventDefault();
+        const message = messageInput.value;
+        const file = imageInput.files[0];
+
+        if (!message && !file) return;
+
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                chatSocket.send(JSON.stringify({
+                    'message': message,
+                    'image': e.target.result
+                }));
+                resetInput();
+            };
+            reader.readAsDataURL(file);
+        } else {
+            chatSocket.send(JSON.stringify({
+                'message': message,
+                'image': null
+            }));
+            resetInput();
+        }
+    };
+
+    function resetInput() {
+        messageInput.value = '';
+        imageInput.value = '';
+        imagePreview.src = '';
+        imagePreview.style.display = 'none';
+    }
+</script>
+{% endif %}
+{% endblock %}

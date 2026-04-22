@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="status-viewer-overlay position-fixed top-0 left-0 w-100 h-100 bg-black z-3 d-flex flex-column align-items-center justify-content-center">
+    <div class="status-header position-absolute top-0 left-0 w-100 p-4 d-flex align-items-center justify-content-between text-white" style="z-index: 10;">
+        <div class="d-flex align-items-center">
+            <a href="{% url 'home' %}" class="btn btn-link text-white me-3 p-0"><i class="bi bi-arrow-left fs-3"></i></a>
+            {% if status_user.profile.avatar %}
+                <img src="{{ status_user.profile.avatar.url }}" class="rounded-circle me-3" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid #fff;">
+            {% else %}
+                <i class="bi bi-person-circle fs-3 me-3"></i>
+            {% endif %}
+            <div>
+                <h6 class="m-0 fw-bold">{{ status_user.username }}</h6>
+                <small class="opacity-75" id="status-time"></small>
+            </div>
+        </div>
+        <button class="btn btn-link text-white p-0" onclick="window.location.href='{% url 'home' %}'"><i class="bi bi-x-lg fs-4"></i></button>
+    </div>
+
+    <div class="status-progress-bar position-absolute top-0 left-0 w-100 p-2 d-flex gap-2" style="z-index: 11;">
+        {% for status in statuses %}
+            <div class="flex-grow-1 bg-secondary rounded-pill overflow-hidden" style="height: 3px;">
+                <div class="progress-fill h-100 bg-white" style="width: 0%; transition: width linear;"></div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="status-content w-100 h-100 d-flex flex-column align-items-center justify-content-center text-white p-4">
+        {% for status in statuses %}
+            <div class="status-item w-100 h-100 d-flex flex-column align-items-center justify-content-center d-none" 
+                 data-utc="{{ status.created_at.isoformat }}"
+                 data-id="{{ status.id }}">
+                {% if status.image %}
+                    <img src="{{ status.image.url }}" class="w-100 h-100 object-fit-contain">
+                    {% if status.caption %}
+                        <div class="position-absolute bottom-0 left-0 w-100 p-5 text-center bg-gradient-to-t from-black to-transparent">
+                            <h5 class="m-0">{{ status.caption }}</h5>
+                        </div>
+                    {% endif %}
+                {% elif status.text %}
+                    <div class="p-5 fs-2 fw-bold text-center w-100">{{ status.text }}</div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="status-nav position-absolute top-0 left-0 w-100 h-100 d-flex" style="z-index: 5;">
+        <div class="flex-grow-1 cursor-pointer" onclick="prevStatus()"></div>
+        <div class="flex-grow-1 cursor-pointer" onclick="nextStatus()"></div>
+    </div>
+</div>
+
+<style>
+    .bg-black { background-color: #000 !important; }
+    .z-3 { z-index: 1050; }
+    .object-fit-contain { object-fit: contain; }
+    .cursor-pointer { cursor: pointer; }
+</style>
+
+<script>
+    let currentStatusIndex = 0;
+    const statuses = document.querySelectorAll('.status-item');
+    const progressFills = document.querySelectorAll('.progress-fill');
+    const timeDisplay = document.getElementById('status-time');
+    const statusDuration = 5000; // 5 seconds per status
+    let statusTimer;
+
+    function showStatus(index) {
+        if (index < 0 || index >= statuses.length) {
+            window.location.href = "{% url 'home' %}";
+            return;
+        }
+
+        // Reset all
+        statuses.forEach(s => s.classList.add('d-none'));
+        progressFills.forEach((f, i) => {
+            f.style.transition = 'none';
+            f.style.width = i < index ? '100%' : '0%';
+        });
+
+        // Show current
+        const current = statuses[index];
+        current.classList.remove('d-none');
+        
+        const utcTime = current.getAttribute('data-utc');
+        const localDate = new Date(utcTime);
+        timeDisplay.textContent = localDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        
+        // Start animation
+        setTimeout(() => {
+            const currentFill = progressFills[index];
+            currentFill.style.transition = `width ${statusDuration}ms linear`;
+            currentFill.style.width = '100%';
+        }, 10);
+
+        // Auto-advance
+        clearTimeout(statusTimer);
+        statusTimer = setTimeout(() => {
+            nextStatus();
+        }, statusDuration);
+        
+        currentStatusIndex = index;
+    }
+
+    function nextStatus() {
+        showStatus(currentStatusIndex + 1);
+    }
+
+    function prevStatus() {
+        showStatus(currentStatusIndex - 1);
+    }
+
+    // Start viewing
+    document.addEventListener('DOMContentLoaded', () => {
+        showStatus(0);
+    });
+
+    // Pause on hold (optional)
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') nextStatus();
+        if (e.key === 'ArrowLeft') prevStatus();
+        if (e.key === 'Escape') window.location.href = "{% url 'home' %}";
+    });
+</script>
+{% endblock %}

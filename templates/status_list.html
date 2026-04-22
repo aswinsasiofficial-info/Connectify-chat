@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="sidebar hide-mobile">
+    <div class="p-4 border-bottom">
+        <img src="{% static 'images/Connectify-logo.png' %}" alt="Connectify" style="height: 30px; filter: brightness(0);">
+    </div>
+    <div class="p-3">
+        <a href="{% url 'create_status' %}" class="btn btn-black w-100 py-2 rounded-pill mb-4">
+            <i class="bi bi-plus-lg me-2"></i> Add My Status
+        </a>
+        <h6 class="text-uppercase small fw-bold text-muted mb-3">Recent Updates</h6>
+        <p class="text-muted small">View status updates from your contacts that expire in 24 hours.</p>
+    </div>
+</div>
+
+<div class="chat-window show-mobile overflow-y-auto p-4 p-md-5">
+    <div class="container-fluid" style="max-width: 600px;">
+        <div class="d-flex align-items-center mb-4 d-md-none">
+            <a href="{% url 'home' %}" class="btn btn-link text-dark me-2 p-0"><i class="bi bi-arrow-left fs-4"></i></a>
+            <h4 class="fw-bold mb-0">Status</h4>
+        </div>
+        
+        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+            <div class="d-flex align-items-center">
+                <a href="{% url 'create_status' %}" class="text-decoration-none position-relative me-3">
+                    {% if user.profile.avatar %}
+                        <img src="{{ user.profile.avatar.url }}" class="rounded-circle border border-2 p-1" style="width: 60px; height: 60px; object-fit: cover;">
+                    {% else %}
+                        <i class="bi bi-person-circle fs-1 text-muted"></i>
+                    {% endif %}
+                    <span class="position-absolute bottom-0 end-0 bg-black text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 22px; height: 22px; border: 2px solid #fff;">
+                        <i class="bi bi-plus small"></i>
+                    </span>
+                </a>
+                <div>
+                    <h6 class="fw-bold m-0">My Status</h6>
+                    <small class="text-muted">Tap to add status update</small>
+                </div>
+            </div>
+        </div>
+
+        <h6 class="text-uppercase small fw-bold text-muted mb-3 px-2">Recent Updates</h6>
+        
+        <div class="list-group list-group-flush shadow-sm rounded-4 overflow-hidden">
+            {% if status_data %}
+                {% for data in status_data %}
+                    {% if data.user != user %}
+                        <a href="{% url 'view_status' data.user.username %}" class="list-group-item list-group-item-action border-0 py-3 d-flex align-items-center">
+                            <div class="rounded-circle border border-2 p-1 me-3 {% if data.has_new %}border-dark{% else %}border-light{% endif %}" style="width: 56px; height: 56px;">
+                                {% if data.user.profile.avatar %}
+                                    <img src="{{ data.user.profile.avatar.url }}" class="rounded-circle w-100 h-100" style="object-fit: cover;">
+                                {% else %}
+                                    <i class="bi bi-person-circle fs-1 text-muted"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="fw-bold m-0">{{ data.user.username }}</h6>
+                                <small class="text-muted status-time" data-utc="{{ data.latest_status.created_at.isoformat }}">
+                                    {{ data.latest_status.created_at|date:"h:i A" }}
+                                </small>
+                            </div>
+                            {% if data.has_new %}
+                                <span class="badge bg-black rounded-pill">New</span>
+                            {% endif %}
+                        </a>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-5 bg-white">
+                    <i class="bi bi-chat-heart fs-1 text-muted opacity-25 mb-3 d-block"></i>
+                    <p class="text-muted small">No status updates to show</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.status-time[data-utc]').forEach(el => {
+        const date = new Date(el.getAttribute('data-utc'));
+        el.textContent = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    });
+</script>
+{% endblock %}

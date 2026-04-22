@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="sidebar hide-mobile">
+    <div class="p-4 border-bottom">
+        <img src="{% static 'images/Connectify-logo.png' %}" alt="Connectify" style="height: 30px; filter: brightness(0);">
+    </div>
+    <div class="p-3">
+        <p class="text-muted small">Upload an image or text to share with your contacts for 24 hours.</p>
+    </div>
+</div>
+
+<div class="chat-window show-mobile overflow-y-auto p-4 p-md-5">
+    <div class="container-fluid" style="max-width: 600px;">
+        <div class="d-flex align-items-center mb-4 d-md-none">
+            <a href="{% url 'home' %}" class="btn btn-link text-dark me-2 p-0"><i class="bi bi-arrow-left fs-4"></i></a>
+            <h4 class="fw-bold mb-0">Add Status</h4>
+        </div>
+        
+        <div class="card border-0 shadow-lg rounded-4 p-4 p-md-5">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-5 text-center">
+                    <div id="status-preview" class="rounded-4 overflow-hidden shadow-sm mx-auto mb-3 d-flex align-items-center justify-content-center bg-light border" style="width: 100%; max-width: 350px; height: 500px;">
+                        <div class="text-center p-4 text-muted" id="preview-placeholder">
+                            <i class="bi bi-image fs-1 mb-3"></i>
+                            <p>Select an image to preview</p>
+                        </div>
+                        <img id="image-display" class="w-100 h-100 object-fit-cover" style="display: none;">
+                        <div id="text-display" class="p-4 fs-3 fw-bold w-100 text-center" style="display: none; background: #000; color: #fff;"></div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-center gap-3 mt-4">
+                        <input type="file" name="image" id="id_image" class="d-none" accept="image/*" onchange="previewImage(this)">
+                        <button type="button" class="btn btn-outline-dark rounded-pill px-4" onclick="document.getElementById('id_image').click()">
+                            <i class="bi bi-camera-fill me-2"></i> Photo
+                        </button>
+                        <button type="button" class="btn btn-outline-dark rounded-pill px-4" onclick="toggleTextInput()">
+                            <i class="bi bi-fonts me-2"></i> Text
+                        </button>
+                    </div>
+                </div>
+
+                <div id="text-input-container" class="mb-4" style="display: none;">
+                    <label class="form-label small fw-bold text-uppercase text-muted">Status Text</label>
+                    <textarea name="text" id="id_text" class="form-control bg-light border-0 py-3 px-4 rounded-3" rows="3" placeholder="What's on your mind?" oninput="updateTextPreview(this)"></textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-uppercase text-muted">Add Caption (Optional)</label>
+                    <input type="text" name="caption" class="form-control bg-light border-0 py-2 px-3 rounded-3" placeholder="Write a caption...">
+                </div>
+
+                <button type="submit" class="btn btn-black w-100 py-3 fw-bold rounded-3 shadow-sm">
+                    Post Status <i class="bi bi-send-fill ms-2"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('image-display').src = e.target.result;
+                document.getElementById('image-display').style.display = 'block';
+                document.getElementById('text-display').style.display = 'none';
+                document.getElementById('preview-placeholder').style.display = 'none';
+            }
+            reader.readAsDataURL(input.files[0]);
+            document.getElementById('id_text').value = '';
+        }
+    }
+
+    function toggleTextInput() {
+        const container = document.getElementById('text-input-container');
+        const display = document.getElementById('text-display');
+        const image = document.getElementById('image-display');
+        const placeholder = document.getElementById('preview-placeholder');
+        
+        if (container.style.display === 'none') {
+            container.style.display = 'block';
+            display.style.display = 'flex';
+            display.style.alignItems = 'center';
+            display.style.justifyContent = 'center';
+            image.style.display = 'none';
+            placeholder.style.display = 'none';
+            document.getElementById('id_image').value = '';
+        } else {
+            container.style.display = 'none';
+            display.style.display = 'none';
+            placeholder.style.display = 'block';
+        }
+    }
+
+    function updateTextPreview(textarea) {
+        const display = document.getElementById('text-display');
+        display.textContent = textarea.value;
+    }
+</script>
+{% endblock %}
