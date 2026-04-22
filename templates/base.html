@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connectify | Real-time Chat</title>
     {% load static %}
+    <link rel="icon" type="image/png" href="{% static 'images/Connectify-logo.png' %}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
@@ -51,16 +52,18 @@
         
         /* Far Left Slim Nav */
         .slim-nav { width: var(--nav-width); background: #000; display: flex; flex-direction: column; align-items: center; padding: 20px 0; color: #fff; height: 100vh; }
+        .nav-logo { width: 40px; height: 40px; margin-bottom: 30px; filter: brightness(0) invert(1); }
         .nav-icon { font-size: 1.5rem; margin-bottom: 25px; cursor: pointer; color: rgba(255,255,255,0.6); transition: color 0.2s; text-decoration: none; display: flex; flex-direction: column; align-items: center; width: 100%; }
         .nav-icon:hover, .nav-icon.active { color: #fff; }
-        .nav-label { font-size: 0.65rem; margin-top: 4px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; opacity: 0.8; }
+        .nav-label { font-size: 0.65rem; margin-top: 4px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; opacity: 0.8; font-family: 'InterTight', sans-serif; }
         .nav-icon.profile { margin-top: auto; margin-bottom: 0; }
         
         /* Bottom Navigation for Mobile */
         .bottom-nav { display: none; width: 100%; height: 60px; background: #fff; border-top: 1px solid var(--border-color); position: fixed; bottom: 0; left: 0; z-index: 1000; justify-content: space-around; align-items: center; }
-        .bottom-nav-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: var(--text-secondary); font-size: 0.7rem; }
+        .bottom-nav-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: var(--text-secondary); font-size: 0.7rem; font-family: 'InterTight', sans-serif; }
         .bottom-nav-item i { font-size: 1.2rem; margin-bottom: 2px; }
         .bottom-nav-item.active { color: #000; }
+        .bottom-nav-item span { font-family: 'InterTight', sans-serif; font-weight: bold; }
 
         /* Main Container */
         .chat-container { flex: 1; display: flex; height: 100%; background: var(--bg-main); overflow: hidden; position: relative; }
@@ -150,6 +153,7 @@
 <body class="{% if other_user or status_user %}in-chat{% endif %}">
     {% if user.is_authenticated %}
     <div class="slim-nav">
+        <img src="{% static 'images/Connectify-logo.png' %}" alt="Logo" class="nav-logo">
         <a href="{% url 'home' %}" class="nav-icon {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'chat_room' %}active{% endif %}" title="Messages">
             <i class="bi bi-chat-fill"></i>
             <span class="nav-label">Chat</span>
