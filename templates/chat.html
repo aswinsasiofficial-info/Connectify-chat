@@ -53,7 +53,12 @@
                         <div class="message-text">{{ message.text }}</div>
                     {% endif %}
                     {% if message.image %}
-                        <img src="{{ message.image.url }}" alt="Sent image">
+                        <div class="message-image-container position-relative">
+                            <img src="{{ message.image.url }}" alt="Sent image" class="img-fluid rounded">
+                            <a href="{{ message.image.url }}" download class="btn btn-sm btn-dark position-absolute top-0 end-0 m-2 opacity-75" title="Download">
+                                <i class="bi bi-download"></i>
+                            </a>
+                        </div>
                     {% endif %}
                     <small class="message-timestamp" data-utc="{{ message.timestamp.isoformat }}">
                         {{ message.timestamp|date:"h:i A" }}
@@ -97,6 +102,23 @@
     const userName = "{{ user.username }}";
     const chatLog = document.querySelector('#chat-log');
     const messageInput = document.querySelector('#chat-message-input');
+    const userSearchInput = document.querySelector('#user-search');
+
+    // User search functionality
+    userSearchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const userItems = document.querySelectorAll('.user-item');
+        
+        userItems.forEach(item => {
+            const username = item.querySelector('.fw-bold').textContent.toLowerCase();
+            if (username.includes(searchTerm)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+
     const imageInput = document.querySelector('#image-input');
     const imagePreview = document.querySelector('#image-preview');
     const chatForm = document.querySelector('#chat-form');
@@ -165,7 +187,12 @@
             content += `<div class="message-text">${data.message}</div>`;
         }
         if (data.image_url) {
-            content += `<img src="${data.image_url}" alt="Sent image">`;
+            content += `<div class="message-image-container position-relative">
+                            <img src="${data.image_url}" alt="Sent image" class="img-fluid rounded">
+                            <a href="${data.image_url}" download class="btn btn-sm btn-dark position-absolute top-0 end-0 m-2 opacity-75" title="Download">
+                                <i class="bi bi-download"></i>
+                            </a>
+                        </div>`;
         }
         content += `<small class="message-timestamp">
                         ${formatLocalTime(data.timestamp)}
