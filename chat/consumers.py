@@ -110,13 +110,28 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }
         )
         
-        # Also broadcast to receiver's private group for unread notification
+        # Also broadcast to receiver's private group for unread notification and sidebar update
         await self.channel_layer.group_send(
             f'user_{self.other_username}',
             {
                 'type': 'unread_notification',
                 'sender': sender.username,
-                'message': message_text[:30] + '...' if len(message_text) > 30 else message_text
+                'message': message_text,
+                'is_image': True if image_data else False,
+                'timestamp': msg.timestamp.isoformat()
+            }
+        )
+        
+        # Broadcast to sender's group to update their own sidebar (if they are on home but not in this chat)
+        await self.channel_layer.group_send(
+            f'user_{self.user.username}',
+            {
+                'type': 'unread_notification',
+                'sender': self.other_username,
+                'message': message_text,
+                'is_image': True if image_data else False,
+                'timestamp': msg.timestamp.isoformat(),
+                'is_self': True
             }
         )
 

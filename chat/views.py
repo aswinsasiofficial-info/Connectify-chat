@@ -10,13 +10,36 @@ import json
 @login_required
 def home(request):
     users = User.objects.exclude(id=request.user.id)
-    # Add unread counts for each user
+    
+    # Add unread counts and last message for each user
     for user in users:
         user.unread_count = Message.objects.filter(
             sender=user,
             receiver=request.user,
             is_read=False
         ).count()
+        
+        # Fetch the latest message between current_user and this user
+        last_msg = Message.objects.filter(
+            (Q(sender=request.user) & Q(receiver=user)) |
+            (Q(sender=user) & Q(receiver=request.user))
+        ).order_by('-timestamp').first()
+        
+        if last_msg:
+            user.last_message = last_msg
+            user.last_message_time = last_msg.timestamp
+        else:
+            user.last_message = None
+            user.last_message_time = None
+
+    # Sort users by last message timestamp (most recent first)
+    # Users with no messages go to the bottom
+    users = sorted(
+        users, 
+        key=lambda u: u.last_message_time if u.last_message_time else timezone.make_aware(timezone.datetime(1970, 1, 1)), 
+        reverse=True
+    )
+    
     return render(request, 'chat.html', {
         'users': users
     })
@@ -54,13 +77,32 @@ def chat_room(request, username):
         is_read=False
     ).update(is_read=True)
 
-    # Add unread counts for sidebar
+    # Add unread counts and last message for sidebar
     for user in users:
         user.unread_count = Message.objects.filter(
             sender=user,
             receiver=request.user,
             is_read=False
         ).count()
+        
+        last_msg = Message.objects.filter(
+            (Q(sender=request.user) & Q(receiver=user)) |
+            (Q(sender=user) & Q(receiver=request.user))
+        ).order_by('-timestamp').first()
+        
+        if last_msg:
+            user.last_message = last_msg
+            user.last_message_time = last_msg.timestamp
+        else:
+            user.last_message = None
+            user.last_message_time = None
+
+    # Sort users by last message timestamp
+    users = sorted(
+        users, 
+        key=lambda u: u.last_message_time if u.last_message_time else timezone.make_aware(timezone.datetime(1970, 1, 1)), 
+        reverse=True
+    )
     
     messages = Message.objects.filter(
         (Q(sender=request.user) & Q(receiver=other_user)) |

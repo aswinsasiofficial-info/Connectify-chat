@@ -16,16 +16,37 @@
         </div>
         <h6 class="text-uppercase small fw-bold text-muted mb-3">Users</h6>
     </div>
-    <div class="user-list overflow-y-auto flex-grow-1">
+    <div class="user-list overflow-y-auto flex-grow-1" id="user-list-container">
         {% for user_item in users %}
-            <a href="{% url 'chat_room' user_item.username %}" class="user-item {% if other_user.username == user_item.username %}active{% endif %}" id="user-item-{{ user_item.username }}">
+            <a href="{% url 'chat_room' user_item.username %}" class="user-item {% if other_user.username == user_item.username %}active{% endif %}" id="user-item-{{ user_item.username }}" data-timestamp="{% if user_item.last_message_time %}{{ user_item.last_message_time.isoformat }}{% else %}1970-01-01T00:00:00Z{% endif %}">
                 <i class="bi bi-person-circle fs-4 me-3"></i>
-                <div class="flex-grow-1">
-                    <div class="fw-bold small">{{ user_item.username }}</div>
-                    <small class="text-muted d-block user-last-msg" style="font-size: 0.75rem;">Hey there! I am using Connectify</small>
-                </div>
-                <div class="unread-badge-container">
-                    <div class="unread-dot bg-success rounded-circle {% if user_item.unread_count == 0 %}d-none{% endif %}" style="width: 12px; height: 12px;"></div>
+                <div class="flex-grow-1 overflow-hidden">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div class="fw-bold small">{{ user_item.username }}</div>
+                        <small class="text-muted last-msg-time" style="font-size: 0.65rem;" data-utc="{% if user_item.last_message_time %}{{ user_item.last_message_time.isoformat }}{% endif %}">
+                            {% if user_item.last_message_time %}
+                                {{ user_item.last_message_time|date:"h:i A" }}
+                            {% endif %}
+                        </small>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted d-block user-last-msg text-truncate pe-2" style="font-size: 0.75rem;">
+                            {% if user_item.last_message %}
+                                {% if user_item.last_message.image %}
+                                    <i class="bi bi-camera-fill me-1"></i> Image
+                                {% else %}
+                                    {{ user_item.last_message.text|truncatechars:30 }}
+                                {% endif %}
+                            {% else %}
+                                No messages yet
+                            {% endif %}
+                        </small>
+                        <div class="unread-badge-container">
+                            <span class="badge bg-success rounded-pill unread-count {% if user_item.unread_count == 0 %}d-none{% endif %}" style="font-size: 0.6rem;">
+                                {{ user_item.unread_count }}
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </a>
         {% endfor %}
@@ -145,27 +166,43 @@
         + '/'
     );
 
+    const userListContainer = document.querySelector('#user-list-container');
+
+    function updateSidebar(sender, message, isImage, timestamp, isSelf) {
+        const userItem = document.getElementById(`user-item-${sender}`);
+        if (!userItem) return;
+
+        // Update preview text
+        const lastMsgEl = userItem.querySelector('.user-last-msg');
+        if (isImage) {
+            lastMsgEl.innerHTML = '<i class="bi bi-camera-fill me-1"></i> Image';
+        } else {
+            lastMsgEl.textContent = message.length > 30 ? message.substring(0, 30) + '...' : message;
+        }
+
+        // Update timestamp
+        const timeEl = userItem.querySelector('.last-msg-time');
+        timeEl.textContent = formatLocalTime(timestamp);
+        userItem.setAttribute('data-timestamp', timestamp);
+
+        // Update unread count if not self and not in current chat
+        if (!isSelf && sender !== roomName) {
+            const badge = userItem.querySelector('.unread-count');
+            let count = parseInt(badge.textContent) || 0;
+            badge.textContent = count + 1;
+            badge.classList.remove('d-none');
+            lastMsgEl.classList.add('fw-bold', 'text-dark');
+        }
+
+        // Move to top
+        userListContainer.prepend(userItem);
+    }
+
     chatSocket.onmessage = function(e) {
         const data = JSON.parse(e.data);
         
         if (data.type === 'unread_notification') {
-            // Update sidebar unread dot if this is not the current chat room
-            if (data.sender !== roomName) {
-                const userItem = document.getElementById(`user-item-${data.sender}`);
-                if (userItem) {
-                    const dot = userItem.querySelector('.unread-dot');
-                    const lastMsg = userItem.querySelector('.user-last-msg');
-                    
-                    dot.classList.remove('d-none');
-                    lastMsg.textContent = data.message;
-                    lastMsg.classList.add('fw-bold', 'text-dark');
-                }
-            } else {
-                // If chat is open, notify server that we read it
-                chatSocket.send(JSON.stringify({
-                    'type': 'mark_read'
-                }));
-            }
+            updateSidebar(data.sender, data.message, data.is_image, data.timestamp, data.is_self);
             return;
         }
 
@@ -199,6 +236,9 @@
         messageDiv.innerHTML = content;
         chatLog.appendChild(messageDiv);
         chatLog.scrollTop = chatLog.scrollHeight;
+
+        // Also update sidebar for current chat
+        updateSidebar(data.sender === userName ? roomName : data.sender, data.message, !!data.image_url, data.timestamp, data.sender === userName);
     };
 
     chatSocket.onclose = function(e) {
