@@ -3,7 +3,7 @@ services:
     name: connectify-chat
     env: python
     buildCommand: "./build.sh"
-    startCommand: "python -m daphne -p $PORT -b 0.0.0.0 chat_project.asgi:application"
+    startCommand: "daphne -b 0.0.0.0 -p $PORT chat_project.asgi:application"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11
